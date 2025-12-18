@@ -18,16 +18,17 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
-      - name: Sync repository to server
-        run: |
-          # rsync -e "ssh -i $HOME/.ssh/id_rsa -o StrictHostKeyChecking=no" --archive --compress --delete . ${{ secrets.REMOTE_DEST }}
-          rsync -e "ssh -i $HOME/.ssh/id_rsa -o StrictHostKeyChecking=no" -av --delete --exclude='.git' --exclude='node_modules' . root@5.101.51.5:${{ secrets.DEPLOY_PATH }}
-        working-directory: ./
+      # - name: Sync repository to server 
+      #   run: |
+      #     # rsync -e "ssh -i $HOME/.ssh/id_rsa -o StrictHostKeyChecking=no" --archive --compress --delete . ${{ secrets.REMOTE_DEST }}
+      #     rsync -e "ssh -i $HOME/.ssh/id_rsa -o StrictHostKeyChecking=no" -av --delete --exclude='.git' --exclude='node_modules' . root@5.101.51.5:${{ secrets.DEPLOY_PATH }}
+      #   working-directory: ./
 
       - name: Run docker-compose on server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
             cd ${{ secrets.DEPLOY_PATH }} &&
-            docker-compose pull --ignore-pull-failures || true &&
-            docker-compose up -d --build
+            docker --version
+            # docker-compose pull --ignore-pull-failures || true &&
+            # ocker-compose up -d --build
           "
