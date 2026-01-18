@@ -33,28 +33,28 @@ docker save localhost:5000/counter-app:latest -o counter-app.tar
 sudo k3s ctr images import counter-app.tar
 
 # Развертывание в Kubernetes
-kubectl apply -f k8s-deployment.yaml
+sudo kubectl apply -f k8s-deployment.yaml
 
 # Проверка статуса развертывания
-kubectl get deployments
-kubectl get pods
-kubectl get services
+sudo kubectl get deployments
+sudo kubectl get pods
+sudo kubectl get services
 
 # Если поды не запускаются, проверьте статус подов приложения:
-kubectl describe pods -l app=counter-app
+sudo kubectl describe pods -l app=counter-app
 
 # Просмотр логов приложения
-kubectl logs -f deployment/counter-app
+sudo kubectl logs -f deployment/counter-app
 
 # Масштабирование приложения (изменить количество реплик)
-kubectl scale deployment counter-app --replicas=1
-kubectl scale deployment counter-app --replicas=4
+sudo kubectl scale deployment counter-app --replicas=1
+sudo kubectl scale deployment counter-app --replicas=4
 
 # Проверка статуса подов
-kubectl get pods -l app=counter-app
+sudo kubectl get pods -l app=counter-app
 ```
 
-> **Примечание:** В k3s команды `kubectl` могут требовать `sudo` или настройки прав доступа к конфигурационному файлу. Если возникают ошибки с правами доступа, используйте `sudo` перед командами `kubectl` или выполните `sudo chmod 644 /etc/rancher/k3s/k3s.yaml` для настройки прав.
+> **Примечание:** В k3s команды `kubectl` требуют `sudo` или настройки прав доступа к конфигурационному файлу. В данной документации все команды `kubectl` выполняются с `sudo`. Альтернативно можно настроить права доступа к конфигурационному файлу: `sudo chmod 644 /etc/rancher/k3s/k3s.yaml` и использовать команды без `sudo`.
 
 ## Доступ к приложению в k3s
 
@@ -62,27 +62,27 @@ kubectl get pods -l app=counter-app
 
 ```bash
 # Получение информации о сервисе (проверка порта)
-kubectl get service counter-app-service
+sudo kubectl get service counter-app-service
 ```
 
 Приложение будет доступно по адресу: **http://localhost**
 
-> **Примечание:** k3s автоматически пробрасывает LoadBalancer сервисы на localhost, поэтому после развертывания приложение сразу доступно по `http://localhost` без дополнительных настроек. Если LoadBalancer не работает локально, можно использовать `kubectl port-forward service/counter-app-service 80:80`.
+> **Примечание:** k3s автоматически пробрасывает LoadBalancer сервисы на localhost, поэтому после развертывания приложение сразу доступно по `http://localhost` без дополнительных настроек. Если LoadBalancer не работает локально, можно использовать `sudo kubectl port-forward service/counter-app-service 80:80`.
 
 ## Остановка и удаление развертывания
 
 ```bash
 # Удаление всех ресурсов из манифеста
-kubectl delete -f k8s-deployment.yaml
+sudo kubectl delete -f k8s-deployment.yaml
 
 # Или удаление отдельных ресурсов
-kubectl delete deployment counter-app
-kubectl delete deployment redis
-kubectl delete service counter-app-service
-kubectl delete service redis-service
+sudo kubectl delete deployment counter-app
+sudo kubectl delete deployment redis
+sudo kubectl delete service counter-app-service
+sudo kubectl delete service redis-service
 
 # Проверка удаления
-kubectl get all
+sudo kubectl get all
 
 # Остановка k3s (опционально)
 sudo systemctl stop k3s
@@ -109,14 +109,14 @@ locust --host=http://localhost
 **Тест с 1 репликой**
 
 ```bash
-kubectl scale deployment counter-app --replicas=1
+sudo kubectl scale deployment counter-app --replicas=1
 locust --host=http://localhost --headless -u 300 -r 30 -t 60s
 ```
 
 **Тест с 4 репликами**
 
 ```bash
-kubectl scale deployment counter-app --replicas=4
+sudo kubectl scale deployment counter-app --replicas=4
 locust --host=http://localhost --headless -u 300 -r 30 -t 60s
 ```
 
