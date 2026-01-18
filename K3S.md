@@ -91,37 +91,6 @@ sudo systemctl disable k3s
 
 ## Нагрузочное тестирование
 
-После развертывания приложения в k3s, нагрузочное тестирование проводится аналогично Swarm:
-
-```bash
-# Активация виртуального окружения
-source venv/bin/activate
-
-# Нагрузочное тестирование в headless-режиме
-locust --host=http://localhost --headless -u 300 -r 30 -t 60s
-
-# Или с веб-интерфейсом
-locust --host=http://localhost
-```
-
-**Сравнение с разным количеством реплик:**
-
-**Тест с 1 репликой**
-
-```bash
-sudo kubectl scale deployment counter-app --replicas=1
-locust --host=http://localhost --headless -u 300 -r 30 -t 60s
-```
-
-**Тест с 4 репликами**
-
-```bash
-sudo kubectl scale deployment counter-app --replicas=4
-locust --host=http://localhost --headless -u 300 -r 30 -t 60s
-```
-
-## Нагрузочное тестирование
-
 Для проверки производительности приложения с 4 репликами используется Locust.
 
 ### Установка Locust
