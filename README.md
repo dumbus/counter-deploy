@@ -54,8 +54,11 @@ docker swarm leave --force
 
 ### Установка Locust
 
-```
+```bash
 pip install locust
+
+# Или через pip3
+pip3 install locust
 ```
 
 ### Запуск нагрузочного тестирования
@@ -64,8 +67,14 @@ pip install locust
 # Запуск Locust с веб-интерфейсом (по умолчанию http://localhost:8089)
 locust --host=http://localhost
 
+# Если команда locust не найдена, используйте python3 -m locust
+python3 -m locust --host=http://localhost
+
 # Запуск без веб-интерфейса (headless режим) для автоматизированного тестирования
 locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+
+# Или через python3 -m locust
+python3 -m locust --host=http://localhost --headless -u 300 -r 30 -t 60s
 
 # Где:
 # -u 300 - 300 пользователей (виртуальных клиентов)
@@ -89,12 +98,30 @@ locust --host=http://localhost --headless -u 300 -r 30 -t 60s
 
 Для сравнения производительности можно использовать команду масштабирования:
 
+**Тест с 1 репликой**
+
 ```bash
-# Тест с 1 репликой
 docker service scale counter_app=1
 locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+```
 
-# Тест с 4 репликами
+или:
+
+```bash
+docker service scale counter_app=1
+python3 -m locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+```
+
+**Тест с 4 репликами**
+
+```bash
 docker service scale counter_app=4
 locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+```
+
+или:
+
+```bash
+docker service scale counter_app=4
+python3 -m locust --host=http://localhost --headless -u 300 -r 30 -t 60s
 ```
