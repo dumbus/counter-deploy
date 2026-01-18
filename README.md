@@ -32,12 +32,25 @@ docker service ps counter_redis
 # Масштабирование сервиса (изменить количество реплик без редактирования файла)
 docker service scale counter_app=1  # Уменьшить до 1 реплики
 docker service scale counter_app=4  # Увеличить до 4 реплик
+```
 
-# Удаление стека
+### Остановка и удаление стека
+
+```bash
+# Удаление стека (остановит все сервисы и удалит стек)
 docker stack rm counter
 
-# Остановка Swarm (после удаления стека)
+# Ожидание полного удаления стека (проверка статуса)
+docker stack services counter
+
+# Удаление неиспользуемых сетей
+docker network prune -f
+
+# Полная остановка Swarm (после удаления всех стеков)
 docker swarm leave --force
+```
+
+**Примечание:** Если порт 80 уже занят другим стеком, необходимо сначала удалить предыдущий стек командой `docker stack rm <имя_стека>`.
 ```
 
 ### Доступ к приложению
@@ -102,6 +115,7 @@ docker swarm init
 docker build -t localhost:5000/counter-app:latest .
 
 # Развертывание стека с реплицированной БД
+
 docker stack deploy -c docker-compose.swarm-replicated.yml counter-replicated
 
 # Проверка статуса сервисов
@@ -110,10 +124,25 @@ docker stack services counter-replicated
 # Просмотр реплик
 docker service ps counter-replicated_app
 docker service ps counter-replicated_redis
-
-# Удаление стека
-docker stack rm counter-replicated
 ```
+
+### Остановка и удаление стека
+
+```bash
+# Удаление стека (остановит все сервисы и удалит стек)
+docker stack rm counter-replicated
+
+# Ожидание полного удаления стека (проверка статуса)
+docker stack services counter-replicated
+
+# Удаление неиспользуемых сетей (опционально)
+docker network prune -f
+
+# Полная остановка Swarm (после удаления всех стеков)
+docker swarm leave --force
+```
+
+**Примечание:** Если порт 80 уже занят другим стеком, необходимо сначала удалить предыдущий стек командой `docker stack rm <имя_стека>`.
 
 ## Нагрузочное тестирование
 
