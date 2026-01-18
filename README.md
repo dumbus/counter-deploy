@@ -180,6 +180,9 @@ docker swarm leave --force
 # Сборка образа
 docker build -t localhost:5000/counter-app:latest .
 
+# Экспорт образа Docker в tar файл для импорта в k3s
+docker save localhost:5000/counter-app:latest -o counter-app.tar
+
 # Импорт образа в k3s
 sudo k3s ctr images import counter-app.tar
 
@@ -191,6 +194,9 @@ kubectl get deployments
 kubectl get pods
 kubectl get services
 
+# Если поды не запускаются, проверьте статус подов приложения:
+kubectl describe pods -l app=counter-app
+
 # Просмотр логов приложения
 kubectl logs -f deployment/counter-app
 
@@ -201,6 +207,8 @@ kubectl scale deployment counter-app --replicas=1
 # Проверка статуса подов
 kubectl get pods -l app=counter-app
 ```
+
+**Примечание:** В k3s команды `kubectl` могут требовать `sudo` или настройки прав доступа к конфигурационному файлу. Если возникают ошибки с правами доступа, используйте `sudo` перед командами `kubectl` или выполните `sudo chmod 644 /etc/rancher/k3s/k3s.yaml` для настройки прав.
 
 ### Доступ к приложению в k3s
 

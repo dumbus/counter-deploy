@@ -17,6 +17,7 @@ spec:
       containers:
       - name: counter-app
         image: localhost:5000/counter-app:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 8000
         env:
