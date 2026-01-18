@@ -217,13 +217,9 @@ kubectl get pods -l app=counter-app
 ```bash
 # Получение внешнего IP сервиса
 kubectl get service counter-app-service
-
-# Для локального доступа в k3s обычно используется localhost или NodePort
-# Если LoadBalancer не работает локально, можно использовать port-forward:
-kubectl port-forward service/counter-app-service 80:80
 ```
 
-Приложение будет доступно по адресу: **http://localhost** (после port-forward)
+Приложение будет доступно по адресу: **http://localhost:{внешний-порт}**
 
 ### Остановка и удаление развертывания
 
