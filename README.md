@@ -29,11 +29,15 @@ docker stack services counter
 docker service ps counter_app
 docker service ps counter_redis
 
-# Масштабирование (если нужно изменить количество реплик)
-docker service scale counter_app=4
+# Масштабирование сервиса (изменить количество реплик без редактирования файла)
+docker service scale counter_app=1  # Уменьшить до 1 реплики
+docker service scale counter_app=4  # Увеличить до 4 реплик
 
 # Удаление стека
 docker stack rm counter
+
+# Остановка Swarm (после удаления стека)
+docker swarm leave --force
 ```
 
 ### Доступ к приложению
@@ -43,3 +47,54 @@ docker stack rm counter
 - **http://localhost**
 
 Приложение использует порт **80** для внешнего доступа. Балансировщик нагрузки Docker Swarm автоматически распределяет запросы между 4 репликами Flask приложения.
+
+## Нагрузочное тестирование
+
+Для проверки производительности приложения с 4 репликами используется Locust.
+
+### Установка Locust
+
+```
+pip install locust
+```
+
+### Запуск нагрузочного тестирования
+
+```bash
+# Запуск Locust с веб-интерфейсом (по умолчанию http://localhost:8089)
+locust --host=http://localhost
+
+# Запуск без веб-интерфейса (headless режим) для автоматизированного тестирования
+locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+
+# Где:
+# -u 300 - 300 пользователей (виртуальных клиентов)
+# -r 30  - скорость набора пользователей (30 в секунду)
+# -t 60s - длительность теста (60 секунд)
+```
+
+### Веб-интерфейс Locust
+
+После запуска `locust --host=http://localhost` откройте в браузере:
+
+- **http://localhost:8089**
+
+В веб-интерфейсе можно:
+- Указать количество пользователей
+- Указать скорость набора пользователей
+- Запустить тест и наблюдать статистику в реальном времени
+- Экспортировать отчеты
+
+### Сравнение производительности
+
+Для сравнения производительности можно использовать команду масштабирования:
+
+```bash
+# Тест с 1 репликой
+docker service scale counter_app=1
+locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+
+# Тест с 4 репликами
+docker service scale counter_app=4
+locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+```
