@@ -1,0 +1,35 @@
+services:
+  app:
+    image: ${DOCKER_REGISTRY:-localhost:5000}/counter-app:latest
+    ports:
+      - "80:8000"
+    deploy:
+      replicas: 4  # 4 экземпляра Flask приложения
+      endpoint_mode: vip  # Встроенная балансировка нагрузки
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      placement:
+        preferences:
+          - spread: node.id
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    deploy:
+      replicas: 3  # 3 реплики Redis для отказоустойчивости
+    # ВАЖНО: При таком развертывании каждая реплика Redis будет независимым экземпляром
+    # без синхронизации данных между ними. Swarm будет балансировать подключения,
+    # но данные не будут реплицироваться автоматически.
