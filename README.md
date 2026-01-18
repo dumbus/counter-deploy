@@ -76,6 +76,265 @@ Docker Swarm запустит:
 1. Прямая проверка жизнеспособности через `healthcheck`
 2. Зависимости между сервисами с условием готовности (`depends_on` -> `service_healthy`)
 
+## Кластеризация приложения Counter (Docker Swarm)
+
+### Конфигурация Docker Swarm
+
+Файл `docker-compose.swarm.yml` содержит конфигурацию для кластеризованного развертывания:
+
+```
+services:
+  app:
+    image: ${DOCKER_REGISTRY:-localhost:5000}/counter-app:latest
+    ports:
+      - "80:8000"
+    deploy:
+      replicas: 4  # 4 экземпляра Flask приложения
+      endpoint_mode: vip  # Встроенная балансировка нагрузки
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      placement:
+        preferences:
+          - spread: node.id
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    deploy:
+      replicas: 1
+```
+
+### Нагрузочное тестирование с использованием Docker Swarm
+
+Для проверки производительности приложения используется Locust. Сценарии нагрузочного тестирования содержатся в файле `locustfile.py`.  
+Нагрузочное тестирование будет использоваться для сравнения производительности: **1 реплика** vs **4 реплики**.
+
+**Параметры тестирования:**
+
+1. Максимальное количество пользователей - 300
+2. Увеличение количества пользователей в секунду - 30
+3. Длительность тестирования - 60 секунд
+
+**Результаты тестирования:**
+
+> TODO:
+
+**Анализ результатов тестирования:**
+
+> TODO:
+
+### Конфигурация Docker Swarm с репликацией Redis
+
+Файл `docker-compose.swarm-replicated.yml` содержит конфигурацию для кластеризованного развертывания (3 реплики Redis):
+
+```
+services:
+  app:
+    image: ${DOCKER_REGISTRY:-localhost:5000}/counter-app:latest
+    ports:
+      - "80:8000"
+    deploy:
+      replicas: 4  # 4 экземпляра Flask приложения
+      endpoint_mode: vip  # Встроенная балансировка нагрузки
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      placement:
+        preferences:
+          - spread: node.id
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    deploy:
+      replicas: 3  # 3 реплики Redis
+```
+
+**Особенности при использовании нескольких реплик Redis в Docker Swarm:**
+
+1. **Независимые экземпляры БД**
+   - Каждая реплика Redis является независимым экземпляром
+   - Данные **не синхронизируются** автоматически между репликами
+   - Каждое подключение может попасть на любой экземпляр Redis
+
+2. **Проблема консистентности данных**
+   - Запись в одну реплику не отражается в других
+   - Разные экземпляры приложения могут видеть разные данные
+   - Потеря целостности данных счетчика
+
+3. **Балансировка подключений**
+   - Docker Swarm распределяет подключения между репликами случайным образом
+   - Нет контроля, какое приложение к какой реплике подключается
+
+**Пути решения проблем репликации:**
+
+1. **Redis Sentinel**
+   - Автоматическое управление master и replicas
+   - Автоматический failover при отказе master
+   - Требует дополнительной настройки конфигурации
+
+2. **Redis Cluster**
+   - Распределение данных по нескольким узлам
+   - Автоматическая репликация
+   - Более сложная настройка, но лучшая производительность
+
+3. **Внешний managed Redis** (AWS ElastiCache, Redis Cloud и т.д.)
+   - Управляемый сервис с автоматической репликацией
+   - Минимальная настройка, максимальная надежность
+
+## Кластеризация приложения Counter (Kubernetes)
+
+Файл `k8s-deployment.yaml` содержит конфигурацию для кластеризованного развертывания:
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: counter-app
+  labels:
+    app: counter-app
+spec:
+  replicas: 4  # 4 реплики Flask приложения
+  selector:
+    matchLabels:
+      app: counter-app
+  template:
+    metadata:
+      labels:
+        app: counter-app
+    spec:
+      containers:
+      - name: counter-app
+        image: localhost:5000/counter-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+        ports:
+        - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: counter-app-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: counter-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+  selector:
+    app: redis
+```
+
+**Изменения при использовании Kubernetes вместо Docker Swarm:**
+
+1. **Формат конфигурации**
+   - Swarm использует `docker-compose.yml` с синтаксисом Compose
+   - Kubernetes использует YAML-манифесты с декларативным API Kubernetes
+
+2. **Архитектура**
+   - Swarm интегрирован в Docker, более простая настройка
+   - Kubernetes - отдельная оркестрационная система, более мощная, но сложнее
+
+3. **Балансировка нагрузки**
+   - Swarm: встроенная балансировка через VIP (Virtual IP)
+   - Kubernetes: Service с типами ClusterIP, NodePort, LoadBalancer
+
+4. **Масштабирование**
+   - Swarm: `docker service scale`
+   - Kubernetes: `kubectl scale deployment` или изменение `replicas` в манифесте
+
+### Нагрузочное тестирование с использованием Kubernetes
+
+Для проверки производительности приложения используется Locust. Сценарии нагрузочного тестирования содержатся в файле `locustfile.py`.  
+Нагрузочное тестирование будет использоваться для сравнения производительности: **Docker Swarm** vs **Kubernetes**.
+
+**Параметры тестирования:**
+
+1. Максимальное количество пользователей - 300
+2. Увеличение количества пользователей в секунду - 30
+3. Длительность тестирования - 60 секунд
+
+**Результаты тестирования:**
+
+> TODO:
+
+**Анализ результатов тестирования:**
+
+> TODO:
+
 ## Документация
 
 Проект поддерживает два способа кластеризованного развертывания:
