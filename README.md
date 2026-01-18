@@ -212,14 +212,16 @@ kubectl get pods -l app=counter-app
 
 ### Доступ к приложению в k3s
 
-После развертывания приложение будет доступно через LoadBalancer service:
+После развертывания приложение будет доступно через LoadBalancer service. В k3s LoadBalancer автоматически пробрасывает порт на localhost:
 
 ```bash
-# Получение внешнего IP сервиса
+# Получение информации о сервисе (проверка порта)
 kubectl get service counter-app-service
 ```
 
-Приложение будет доступно по адресу: **http://localhost:{внешний-порт}**
+Приложение будет доступно по адресу: **http://localhost**
+
+**Примечание:** k3s автоматически пробрасывает LoadBalancer сервисы на localhost, поэтому после развертывания приложение сразу доступно по `http://localhost` без дополнительных настроек. Если LoadBalancer не работает локально, можно использовать `kubectl port-forward service/counter-app-service 80:80`.
 
 ### Остановка и удаление развертывания
 
