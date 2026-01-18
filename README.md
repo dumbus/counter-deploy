@@ -143,6 +143,131 @@ docker swarm leave --force
 
 **Примечание:** Если порт 80 уже занят другим стеком, необходимо сначала удалить предыдущий стек командой `docker stack rm <имя_стека>`.
 
+## Развертывание с Kubernetes (k3s)
+
+### Kubernetes vs Docker Swarm
+
+При использовании Kubernetes вместо Docker Swarm происходят следующие изменения:
+
+1. **Формат конфигурации**
+   - Swarm использует `docker-compose.yml` с синтаксисом Compose
+   - Kubernetes использует YAML-манифесты с декларативным API Kubernetes
+
+2. **Архитектура**
+   - Swarm интегрирован в Docker, более простая настройка
+   - Kubernetes - отдельная оркестрационная система, более мощная, но сложнее
+
+3. **Балансировка нагрузки**
+   - Swarm: встроенная балансировка через VIP (Virtual IP)
+   - Kubernetes: Service с типами ClusterIP, NodePort, LoadBalancer
+
+4. **Масштабирование**
+   - Swarm: `docker service scale`
+   - Kubernetes: `kubectl scale deployment` или изменение `replicas` в манифесте
+
+### Конфигурация для k3s
+
+Файл `k8s-deployment.yaml` содержит конфигурацию для развертывания в Kubernetes/k3s:
+
+- 4 реплики Flask приложения (Deployment)
+- 1 реплика Redis (Deployment)
+- Service для балансировки нагрузки приложения (LoadBalancer на порту 80)
+- Service для Redis (ClusterIP на порту 6379)
+
+### Команды для развертывания с k3s
+
+```bash
+# Сборка образа
+docker build -t localhost:5000/counter-app:latest .
+
+# Импорт образа в k3s
+sudo k3s ctr images import counter-app.tar
+
+# Развертывание в Kubernetes
+kubectl apply -f k8s-deployment.yaml
+
+# Проверка статуса развертывания
+kubectl get deployments
+kubectl get pods
+kubectl get services
+
+# Просмотр логов приложения
+kubectl logs -f deployment/counter-app
+
+# Масштабирование приложения (изменить количество реплик)
+kubectl scale deployment counter-app --replicas=4
+kubectl scale deployment counter-app --replicas=1
+
+# Проверка статуса подов
+kubectl get pods -l app=counter-app
+```
+
+### Доступ к приложению в k3s
+
+После развертывания приложение будет доступно через LoadBalancer service:
+
+```bash
+# Получение внешнего IP сервиса
+kubectl get service counter-app-service
+
+# Для локального доступа в k3s обычно используется localhost или NodePort
+# Если LoadBalancer не работает локально, можно использовать port-forward:
+kubectl port-forward service/counter-app-service 80:80
+```
+
+Приложение будет доступно по адресу: **http://localhost** (после port-forward)
+
+### Остановка и удаление развертывания
+
+```bash
+# Удаление всех ресурсов из манифеста
+kubectl delete -f k8s-deployment.yaml
+
+# Или удаление отдельных ресурсов
+kubectl delete deployment counter-app
+kubectl delete deployment redis
+kubectl delete service counter-app-service
+kubectl delete service redis-service
+
+# Проверка удаления
+kubectl get all
+
+# Остановка k3s (опционально)
+sudo systemctl stop k3s
+sudo systemctl disable k3s
+```
+
+### Нагрузочное тестирование с k3s
+
+После развертывания приложения в k3s, нагрузочное тестирование проводится аналогично Swarm:
+
+```bash
+# Активация виртуального окружения (если еще не активировано)
+source venv/bin/activate
+
+# Нагрузочное тестирование через LoadBalancer или port-forward
+locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+
+# Или с веб-интерфейсом
+locust --host=http://localhost
+```
+
+**Сравнение с разным количеством реплик:**
+
+**Тест с 1 репликой**
+
+```bash
+kubectl scale deployment counter-app --replicas=1
+locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+```
+
+**Тест с 4 репликами**
+
+```bash
+kubectl scale deployment counter-app --replicas=4
+locust --host=http://localhost --headless -u 300 -r 30 -t 60s
+```
+
 ## Нагрузочное тестирование
 
 Для проверки производительности приложения с 4 репликами используется Locust.
